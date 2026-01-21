@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
     image: {type: String}
 })
 
-const User = mongoose.model('User', userSchema)
+// Use short-circuit evaluation to prevent re-compilation errors
+const User = mongoose.models.User || mongoose.model('User', userSchema)
 
-export default User
+export default User;
