@@ -26,8 +26,6 @@ export const addShow = async (req, res) => {
         let movie = await Movie.findById(movieId);
         if (!movie) {
             // fetch movie details and credits from TMDB API
-            return
-            return
         }
     } catch (error) {
         console.error(error);
