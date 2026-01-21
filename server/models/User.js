@@ -1,13 +1,13 @@
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
-    _id: {type: String, required: true},
-    name: {type: String, required: true},
-    email: {type: String, required: true},
-    image: {type: String}
-})
+    _id: { type: String, required: true },
+    name: { type: String, required: true },
+    email: { type: String, required: true },
+    image: { type: String }
+});
 
-// Use short-circuit evaluation to prevent re-compilation errors
-const User = mongoose.models.User || mongoose.model('User', userSchema)
+// Short-circuit evaluation prevents re-compilation errors in development
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 export default User;
