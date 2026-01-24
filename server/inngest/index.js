@@ -53,4 +53,4 @@ export const functions = [
     syncUserCreation,
     syncUserDeletion,
     syncUserUpdation
-];
+];x
