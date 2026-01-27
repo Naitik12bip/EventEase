@@ -7,7 +7,9 @@ import { serve } from "inngest/express";
 import { inngest, functions } from "./inngest/index.js"
 import showRouter from './routes/showRoutes.js';
 import inngestHandler from './inngest/handler.js';
-import showRouter from './routes/showRoutes.js';
+import bookingRouter from './routes/bookingRoutes.js';
+import adminRouter from './routes/adminRoutes.js';
+
 
 const app = express();
 const port = 3000;
@@ -24,7 +26,7 @@ app.use(clerkMiddleware())
 app.get('/',(req, res)=> res.send('Server Is Live!'))
 app.use('/api/inngest',serve({ inngestHandler, client: inngest, functions }))
 app.use('/api/shows', showRouter);
-app.use('/api/shows', showRouter);
+app.use('/api/booking', bookingRouter);
+app.use('/api/admin', adminRouter);
 
-//
 app.listen(port, () => console.log(`Server listening at http://localhost:${port}`));

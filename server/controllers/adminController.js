@@ -1,0 +1,56 @@
+import Booking from "../models/Booking";
+import Show from "../models/Show";
+
+// API to check if user is admin
+export const isAdmin = async (req, res) => {
+    res.json({ success: true, isAdmin: true });
+}
+
+// API to get dashboard data
+export const getDashboardData = async (req, res) => {
+    try {
+        const bookings = await Booking.find({isPaid: true});
+        const activeShows = await Show.find({showDateTime: {$gte: new Date()}}).populate('movie');
+
+        const totalUsers = await User.countDocuments();
+
+        const dashboardData = {
+            totalBookings: bookings.length,
+            totalEarnings: bookings.reduce((acc, booking) => acc + booking.amount, 0),
+            activeShows,
+            totalUsers
+        }
+
+        res.json({success: true, dashboardData})
+    } catch (err) {
+        console.log(err);
+        res.json({success: false, message: err.message});
+    }
+}
+
+// API to get all shows
+
+export const getAllShows = async (req, res) => {
+    try {
+        const shows = (await Show.find({showDateTime: {$gte: new Date()}}).populate('movie')).toSorted({ showDateTime: 1 });
+        res.json({success: true, shows});
+    }
+    catch (err) {
+        console.error(err);
+        res.json({success: false, message: err.message});
+    }
+}
+
+// API to get all bookings
+export const getAllBookings = async (req, res) => {
+    try {
+        const bookings = await Booking.find({}).populate('user').populate({
+            path: 'show',
+            populate: { path: 'movie' }
+        }).sorted({ createdAt: -1 });
+        res.json({success: true, bookings});
+    } catch (err) {
+        console.error(err);
+        res.json({success: false, message: err.message});
+    }
+}
