@@ -2,6 +2,41 @@ import axios from "axios";
 import Movie from "../models/Movie.js";
 import Show from "../models/Show.js";
 
+const saveShow = async (showData) => {
+  try {
+    // Destructure data from showData
+    const { movie, showDateTime, showPrice, occupiedSeats } = showData;
+
+    const newShow = new Show({
+      movie,
+      showDateTime,
+      showPrice,
+      occupiedSeats,
+    });
+
+    // Check if a show with the same movie and datetime already exists
+    const existingShow = await Show.findOne({
+      movie: newShow.movie,
+      showDateTime: newShow.showDateTime
+    });
+
+    if (existingShow) {
+      console.log('Show already exists:', existingShow);
+      return existingShow; // Optionally return the existing show if you don't want duplicates
+    }
+
+    // Save the new show to the database
+    const savedShow = await newShow.save();
+    console.log('Show saved:', savedShow);
+    return savedShow;
+  } catch (err) {
+    console.error('Error saving show:', err);
+    throw err; // Rethrow the error to handle it higher up in the call stack
+  }
+};
+
+export default saveShow;
+
 // API to get now playing movies from TMDB
 export const getNowPlayingMovies = async (req, res) => {
     try {
