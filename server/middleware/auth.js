@@ -1,16 +1,25 @@
 import { clerkClient } from "@clerk/express";
 
 export const protectAdmin = async (req, res, next) => {
-    try{
-        const { userId } = req.auth;
+    try {
+        // FIX 1: Use req.auth() as a function (Clerk v5+ requirement)
+        const { userId } = req.auth(); 
 
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "No session found. Please log in." });
+        }
+
+        // FIX 2: Await the user data from Clerk
         const user = await clerkClient.users.getUser(userId);
 
-        if(user.privateMetadata.role !== 'admin'){
-            return res.json({ success: false, message: "Not Authorized" });
+        // FIX 3: Check metadata for admin role
+        if (user.privateMetadata?.role !== 'admin') {
+            return res.status(403).json({ success: false, message: "Access denied: Admins only." });
         }
-        next();
-    }catch(err){
-        return res.json({ success: false, message: "Not Authorized" });
+
+        next(); // Success! Move to addShow controller
+    } catch (err) {
+        console.error("Auth Middleware Error:", err);
+        return res.status(401).json({ success: false, message: "Invalid or expired token" });
     }
 }

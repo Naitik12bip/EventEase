@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 const showSchema = new mongoose.Schema(
   {
     movie: { 
-      type: Number, // Keep it as a Number
+      type: Number,
+      ref: 'Movie', // Keep it as a Number
       required: true
     },
     showDateTime: { type: Date, required: true },

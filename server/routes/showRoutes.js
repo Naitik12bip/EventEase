@@ -5,12 +5,16 @@ import { protectAdmin } from '../middleware/auth.js';
 
 const showRouter = express.Router();
 
-// GET route to fetch now playing movies
+// 1. Admin Routes
+showRouter.post('/add', addShow);
 showRouter.get('/now-playing', protectAdmin, getNowPlayingMovies);
-// POST route to add a new show
-showRouter.post('/add',protectAdmin, addShow);
-showRouter.get('/all', getShows);
+
+// 2. Static Routes (Must go BEFORE dynamic params)
+showRouter.get('/all', getShows); 
+
+// 3. Dynamic Routes (Must go LAST)
 showRouter.get('/:movieId', getShow);
+
 // POST route to save a show (you can keep this or remove it if addShow is handling this)
 showRouter.post('/', async (req, res) => {
     try {

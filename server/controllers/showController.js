@@ -58,10 +58,18 @@ export const getNowPlayingMovies = async (req, res) => {
 export const addShow = async (req, res) => {
     try {
         const { movieId, showsInput, showPrice } = req.body;
+
+        // Validation check to prevent the "SyntaxError" or "CastError"
+        if (!movieId || isNaN(movieId)) {
+            return res.status(400).json({ success: false, message: "Valid numeric Movie ID is required" });
+        }
+
         const numericMovieId = Number(movieId);
-
+        
+        // Use findById since you've mapped _id to numericMovieId
         let movie = await Movie.findById(numericMovieId);
-
+        
+        // ... rest of your TMDB fetching logic ...
         if (!movie) {
             // fetch movie details and credits from TMDB API
             const [movieDetailsResponse, movieCreditsResponse] = await Promise.all([
@@ -134,40 +142,54 @@ export const addShow = async (req, res) => {
 
 // API to get all shows from the database
 export const getShows = async (req, res) => {
-    try{ 
-        const shows =  (await Show.find({showDateTime: {$gte: new Date()}}).populate('movie')).toSorted({ showDateTime: 1});
+    try { 
+        const shows = await Show.find({ showDateTime: { $gte: new Date() } })
+            .populate('movie')
+            .sort({ showDateTime: 1 }); // Use Mongoose .sort() instead of .toSorted() for better performance
 
-        // filter unique shows
+        // Filter for unique movies by ID
+        const uniqueMovieMap = {};
+        shows.forEach(show => {
+            if (show.movie && !uniqueMovieMap[show.movie._id]) {
+                uniqueMovieMap[show.movie._id] = show.movie;
+            }
+        });
 
-        const uniqueShows = new Set(shows.map(show => show.movie));
-
-        res.json({success: true, shows: Array.from(uniqueShows)});
-    } catch(err){
+        res.json({ success: true, shows: Object.values(uniqueMovieMap) });
+    } catch(err) {
         console.error(err);
         res.json({ success: false, message: err.message });
     }
-
 }
-
 // API to get a single show from the database
 export const getShow = async (req, res) => {
-    try{
+    try {
         const { movieId } = req.params;
-        //get all upcoming shows for the movie
+        const numericMovieId = Number(movieId); // Convert to number
 
-        const shows = await  Show.find({movie: movieId, showDataTime: {$gte: new Date() }})
-        const movie = await Movie.findById(movieId);
+        // 🛑 Fix typo: changed showDataTime -> showDateTime
+        const shows = await Show.find({ 
+            movie: numericMovieId, 
+            showDateTime: { $gte: new Date() } 
+        });
+
+        const movie = await Movie.findById(numericMovieId);
+        
+        if (!movie) {
+            return res.status(404).json({ success: false, message: "Movie not found" });
+        }
+
         const dateTime = {};
-
-        shows.forEach((show)=> {
+        shows.forEach((show) => {
             const date = show.showDateTime.toISOString().split('T')[0];
-            if(!dateTime[date]){
+            if (!dateTime[date]) {
                 dateTime[date] = [];
             }
-            dateTime[date].push({time: show.showDateTime, showId: show._id});
-        })
+            dateTime[date].push({ time: show.showDateTime, showId: show._id });
+        });
+
         res.json({ success: true, movie, dateTime });
-    } catch(err){
+    } catch (err) {
         console.error(err);
         res.json({ success: false, message: err.message });
     }
