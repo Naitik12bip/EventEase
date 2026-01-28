@@ -2,7 +2,7 @@
 // API Controller Funtion to get user bookings
 
 import { clerkClient } from "@clerk/express";
-import Booking from "../models/Booking";
+import Booking from "../models/Booking.js";
 
 export const getUserBookings = async (req, res) => {
     try {

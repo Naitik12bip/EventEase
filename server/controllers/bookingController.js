@@ -1,6 +1,6 @@
 // Function to check availabilty of selected seate for a movie
 
-import Booking from "../models/Booking";
+import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
 
 const checkSeatAvailability = async (showId, selectedSeats) => {
