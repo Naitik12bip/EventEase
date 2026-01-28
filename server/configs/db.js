@@ -2,12 +2,15 @@ import mongoose from "mongoose";
 
 const connectDB = async () => {
     try {
-        mongoose.connection.on('connected', () => console.log('Database Connected'));
+        mongoose.connection.on('connected', () => console.log('Database Connected to EventEase'));
         
-        // Ensure your MONGODB_URI is in .env
-        await mongoose.connect(`${process.env.MONGODB_URI}/eventease`);
+        // This method is cleaner and prevents double-slash errors
+        await mongoose.connect(process.env.MONGODB_URI, {
+            dbName: 'eventease' // Forces Mongoose to use this specific database
+        });
     } catch (error) {
         console.error("Database connection error:", error.message);
+        process.exit(1); // Stop the server if DB connection fails
     }
 }
 

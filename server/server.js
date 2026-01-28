@@ -22,6 +22,14 @@ app.use(express.json())
 app.use(cors())
 app.use(clerkMiddleware())
 
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    console.error("Bad JSON received:", err.message);
+    return res.status(400).json({ success: false, message: "Invalid JSON format. Check for hidden characters!" });
+  }
+  next();
+});
+
 
 // API Routes
 app.get('/',(req, res)=> res.send('Server Is Live!'))

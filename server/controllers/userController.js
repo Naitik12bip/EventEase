@@ -3,6 +3,7 @@
 
 import { clerkClient } from "@clerk/express";
 import Booking from "../models/Booking.js";
+import Movie from "../models/Movie.js";
 
 export const getUserBookings = async (req, res) => {
     try {

@@ -6,12 +6,11 @@ import { protectAdmin } from '../middleware/auth.js';
 const showRouter = express.Router();
 
 // 1. Admin Routes
-showRouter.post('/add', addShow);
+showRouter.post('/add', protectAdmin, addShow);
 showRouter.get('/now-playing', protectAdmin, getNowPlayingMovies);
 
 // 2. Static Routes (Must go BEFORE dynamic params)
-showRouter.get('/all', getShows); 
-
+showRouter.get('/all', getShows);
 // 3. Dynamic Routes (Must go LAST)
 showRouter.get('/:movieId', getShow);
 

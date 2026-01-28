@@ -21,7 +21,7 @@ export const AppProvider = ({ children }) => {
 
     const fetchIsAdmin = async (userId) => {
         try {
-            const { data } = await axios.get('/api/admin/is-admin', { 
+            const { data } = await axios.get('admin/is-admin', { 
                 headers: { Authorization: `Bearer ${await getToken()}` }
             });
             setIsAdmin(data.isAdmin);
@@ -37,7 +37,7 @@ export const AppProvider = ({ children }) => {
 
     const fetchShows = async () => {
         try {
-            const { data } = await axios.get('/api/show/all');
+            const { data } = await axios.get('shows/all');
             if (data.success) {
                 setShow(data.shows);
             } else {
@@ -51,7 +51,7 @@ export const AppProvider = ({ children }) => {
     const fetchFavoriteMovies = async () => {
         try {
             const token = await getToken();
-            const { data } = await axios.get('/api/user/favorites', { 
+            const { data } = await axios.get('/user/favorites', { 
                 headers: { Authorization: `Bearer ${token}` } 
             });
 
