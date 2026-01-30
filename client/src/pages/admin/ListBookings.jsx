@@ -3,22 +3,32 @@ import { dummyBookingData } from "../../assets/assets";
 import Loading from "../../components/Loading";
 import Title from "../../components/admin/Title";
 import { dateFormat } from "../../lib/dateFormat";
+import { useAppContext } from "../../context/AddContext.jsx";
 
 const ListBookings = () => {
 
-    const currency = import.meta.env.VITE_CURRENCY
+    const { axios, getToken, user } = useAppContext();
 
     const [bookings, setBookings] = useState([]);
     const [isLoading, setisLoading] = useState(true);
 
     const getAllBookings = async () => {
-        setBookings(dummyBookingData)
+        try {
+            const { data } = axios.get("/api/admin/all-bookings", {
+                headers: {Authorization: `Bearer ${await getToken()}`}
+            });
+            setBookings(data.bookings)
+        } catch (error) {
+            console.error(error);
+        }
         setisLoading(false);
     };
 
     useEffect(() => {
-        getAllBookings();
-    }, []);
+        if(user){
+            getAllBookings();
+        }
+    }, [user]);
 
 
     return !isLoading ? (
@@ -58,7 +68,7 @@ const ListBookings = () => {
                                     {dateFormat(item.show.showDateTime)}
                                 </td>
                                 <td className="p-2">
-                                    {Object.keys(item.bookedSeats).map(seat=> item.bookedSeats[seat]).join(", ")}
+                                    {Object.keys(item.bookedSeats).map(seat => item.bookedSeats[seat]).join(", ")}
                                 </td>
                                 <td className="p-2">
                                     {currency} {item.amount}

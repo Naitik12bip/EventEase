@@ -14,6 +14,7 @@ import userRouter from './routes/userRoutes.js';
 
 // Handler Import
 import inngestHandler from './inngest/handler.js';
+import paymentRouter from './routes/paymentRoutes.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -44,7 +45,7 @@ app.get('/', (req, res) => res.send('Server Is Live!'));
 app.use('/api/user', userRouter);
 
 // 3. Shows Routes (Full path: /api/shows/all)
-app.use('/api/shows/all', showRouter);
+app.use('/api/show/all', showRouter);
 
 // 4. Inngest
 app.use('/api/inngest', serve({ inngestHandler, client: inngest, functions }));
@@ -52,6 +53,9 @@ app.use('/api/inngest', serve({ inngestHandler, client: inngest, functions }));
 // 5. Bookings & Admin
 app.use('/api/booking', bookingRouter);
 app.use('/api/admin', adminRouter);
+
+// 6. payment api 
+app.use("/api/payment", paymentRouter);
 
 // Start Server
 app.listen(port, () => console.log(`Server listening at http://localhost:${port}`));

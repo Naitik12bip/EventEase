@@ -4,6 +4,7 @@ import { assets } from '../assets/assets';
 // Fix 3: Correct import for Lucide icons (must use destructuring)
 import { Menu, Search, TicketPlus, X } from 'lucide-react';
 import { useClerk, UserButton, useUser } from '@clerk/clerk-react';
+import { useAppContext } from '../context/AddContext.jsx';
 
 const Navbar = () => {
     // Fix 4: Add state to control the visibility of the mobile menu
@@ -11,6 +12,8 @@ const Navbar = () => {
     const { user } = useUser()
     const { openSignIn } = useClerk()
     const navigate = useNavigate()
+
+    const { favoriteMovies } = useAppContext();
 
     return (
         /* Added 'h-20' to lock the height so it doesn't grow too big */
@@ -51,7 +54,7 @@ const Navbar = () => {
                 <Link to='/movies' onClick={() => { scrollTo(0, 0); setIsMenuOpen(false) }}>Movies</Link>
                 <Link to='/' onClick={() => { scrollTo(0, 0); setIsMenuOpen(false) }}>Events</Link>
                 <Link to='/' onClick={() => { scrollTo(0, 0); setIsMenuOpen(false) }}>Community</Link>
-                <Link to='/favorite' onClick={() => { scrollTo(0, 0); setIsMenuOpen(false) }}>Favorites</Link>
+                { favoriteMovies.length > 0 && <Link to='/favorite' onClick={() => { scrollTo(0, 0); setIsMenuOpen(false) }}>Favorites</Link>}
             </div>
 
             {/* Added 'items-center' to ensure vertical alignment doesn't break */}

@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import React, { use, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { dummyDateTimeData, dummyShowsData, assets } from '../assets/assets'
 import Loading from '../components/Loading'
 import { ArrowRightIcon, Clock } from 'lucide-react'
 import BlurCircle from '../components/BlurCircle'
 import toast from 'react-hot-toast'
+import { useAppContext } from '../context/AddContext'
 
 const SeatLayout = () => {
   const groupRows = [["A", "B"], ["C", "D"], ["E", "F"], ["G", "H"], ["I", "J"]]
@@ -12,7 +13,26 @@ const SeatLayout = () => {
   const [selectedSeats, setSelectedSeats] = useState([])
   const [selectedTime, setSelectedTime] = useState(null)
   const [show, setShow] = useState(null)
+  const [occupiedSeats, setOccupiedSeats] = useState([]);
+
   const navigate = useNavigate()
+
+  const { axios, getToken, user } = useAppContext();
+
+  const getShow = async () => {
+    try {
+      const { data } = await axios.get(`/api/show/${id}`);
+
+      if (data.success) {
+        setShow(data)
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
 
   const handleSeatClick = (seatId) => {
     if (!selectedTime) {
@@ -20,6 +40,9 @@ const SeatLayout = () => {
     }
     if (!selectedSeats.includes(seatId) && selectedSeats.length > 4) {
       return toast("You can only select 5 seats")
+    }
+    if (occupiedSeats.includes(seatId)) {
+      return toast('This seat is already booked')
     }
     setSelectedSeats(prev => prev.includes(seatId) ? prev.filter(seat => seat !== seatId) : [...prev, seatId])
   }
@@ -30,7 +53,8 @@ const SeatLayout = () => {
         {Array.from({ length: count }, (_, i) => {
           const seatId = `${row}${i + 1}`;
           return (
-            <button key={seatId} onClick={() => handleSeatClick(seatId)} className={`h-8 w-8 rounded border border-primary/60 cursor-pointer ${selectedSeats.includes(seatId) && "bg-primary text-white"}`}>
+            <button key={seatId} onClick={() => handleSeatClick(seatId)} className={`h-8 w-8 rounded border border-primary/60 cursor-pointer 
+            ${selectedSeats.includes(seatId) && "bg-primary text-white"} : ${occupiedSeats.includes(seatId) && "opacity-50"}`}>
               {seatId}
             </button>
           );
@@ -39,16 +63,101 @@ const SeatLayout = () => {
     </div>
   )
 
-  useEffect(() => {
-    // We use String() because your _id in assets is a string "324544"
-    const foundShow = dummyShowsData.find(item => String(item._id) === String(id))
-    if (foundShow) {
-      setShow({
-        movie: foundShow,
-        dateTime: dummyDateTimeData
-      })
+  const getOccupiedSeats = async () => {
+    try {
+      const { data } = await axios.get(`/api/booking/seats/${selectedTime.showId}`)
+
+      if (data.success) {
+        setOccupiedSeats(data.occupiedSeats)
+      } else {
+        toast.error(data.message)
+      }
+    } catch {
+      console.log(error);
     }
-  }, [id])
+  }
+
+  const bookTickets = async () => {
+    try {
+      if (!user) {
+        return toast.error("Please login to proceed");
+      }
+
+      if (!selectedTime || !selectedSeats.length) {
+        return toast.error("Please select a time and seats");
+      }
+
+      const { data } = await axios.post(
+        "/api/booking/create",
+        {
+          showId: selectedTime.showId,
+          selectedSeats
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${await getToken()}`
+          }
+        }
+      );
+
+      if (data.success) {
+        toast.success(data.message)
+        navigate('/my-bookings')
+      } else {
+        toast.error(data.success)
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const loadRazorpay = () =>
+    new Promise(resolve => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+
+  const payNow = async () => {
+    const res = await loadRazorpay();
+    if (!res) return toast.error("Razorpay failed to load");
+
+    const { data } = await axios.post("/api/payment/create-order", {
+      amount: 500 // example amount
+    });
+
+    const options = {
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+      amount: data.order.amount,
+      currency: "INR",
+      order_id: data.order.id,
+      name: "Movie Booking",
+      description: "Ticket Payment",
+      handler: function (response) {
+        toast.success("Payment Successful 🎉");
+        console.log(response);
+      },
+      theme: { color: "#7c3aed" }
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+  };
+
+
+
+  useEffect(() => {
+    getShow();
+  }, []);
+
+  useEffect(() => {
+    if (selectedTime) {
+      getOccupiedSeats()
+    }
+  }, [selectedTime])
+
 
   if (!show) return <Loading />
 
@@ -107,9 +216,9 @@ const SeatLayout = () => {
           </div>
         </div>
 
-        <button onClick={()=>navigate('/my-bookings')} className='flex items-center gap-1 mt-20 px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer active:scale-95'>
+        <button onClick={bookTickets} className='flex items-center gap-1 mt-20 px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer active:scale-95'>
           Proceed To Checkout
-          <ArrowRightIcon strokeWidth={3} className='w-4 h-4'/>
+          <ArrowRightIcon strokeWidth={3} className='w-4 h-4' />
         </button>
 
       </div>
