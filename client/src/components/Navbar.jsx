@@ -50,7 +50,7 @@ const Navbar = () => {
                 <Link to='/' onClick={() => { scrollTo(0, 0); setIsMenuOpen(false) }}>Home</Link>
                 <Link to='/movies' onClick={() => { scrollTo(0, 0); setIsMenuOpen(false) }}>Movies</Link>
                 <Link to='/' onClick={() => { scrollTo(0, 0); setIsMenuOpen(false) }}>Events</Link>
-                <Link to='/' onClick={() => { scrollTo(0, 0); setIsMenuOpen(false) }}>Community Events</Link>
+                <Link to='/' onClick={() => { scrollTo(0, 0); setIsMenuOpen(false) }}>Community</Link>
                 <Link to='/favorite' onClick={() => { scrollTo(0, 0); setIsMenuOpen(false) }}>Favorites</Link>
             </div>
 

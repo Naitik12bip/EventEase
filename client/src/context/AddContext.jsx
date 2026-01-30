@@ -21,7 +21,7 @@ export const AppProvider = ({ children }) => {
 
     const fetchIsAdmin = async (userId) => {
         try {
-            const { data } = await axios.get('admin/is-admin', { 
+            const { data } = await axios.get('/admin/is-admin', { 
                 headers: { Authorization: `Bearer ${await getToken()}` }
             });
             setIsAdmin(data.isAdmin);
@@ -37,7 +37,7 @@ export const AppProvider = ({ children }) => {
 
     const fetchShows = async () => {
         try {
-            const { data } = await axios.get('shows/all');
+            const { data } = await axios.get('/shows/all');
             if (data.success) {
                 setShow(data.shows);
             } else {
