@@ -23,7 +23,7 @@ const AddShows = () => {
     const fetchNowPlayingMovies = async () => {
         try {
             const token = await getToken();
-            const { data } = await axios.get('/shows/now-playing',
+            const { data } = await axios.get('/admin/shows/now-playing',
                 {
                     headers: { Authorization: `Bearer ${token}` }
                 });
@@ -98,7 +98,7 @@ const AddShows = () => {
         if (user) {
             fetchNowPlayingMovies();
         }
-    }, []);
+    }, [user]);
 
     return nowPlayingMovies.length > 0 ? (
         <>

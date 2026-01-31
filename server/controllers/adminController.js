@@ -1,5 +1,7 @@
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
+import User from "../models/User.js";
+
 
 // API to check if user is admin
 export const isAdmin = async (req, res) => {
@@ -32,7 +34,7 @@ export const getDashboardData = async (req, res) => {
 
 export const getAllShows = async (req, res) => {
     try {
-        const shows = (await Show.find({showDateTime: {$gte: new Date()}}).populate('movie')).toSorted({ showDateTime: 1 });
+        const shows = (await Show.find({showDateTime: {$gte: new Date()}}).populate('movie').sort({ showDateTime: 1 }));
         res.json({success: true, shows});
     }
     catch (err) {
@@ -47,7 +49,7 @@ export const getAllBookings = async (req, res) => {
         const bookings = await Booking.find({}).populate('user').populate({
             path: 'show',
             populate: { path: 'movie' }
-        }).sorted({ createdAt: -1 });
+        }).sort({ createdAt: -1 });
         res.json({success: true, bookings});
     } catch (err) {
         console.error(err);

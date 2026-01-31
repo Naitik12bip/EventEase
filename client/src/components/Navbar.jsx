@@ -17,7 +17,7 @@ const Navbar = () => {
 
     return (
         /* Added 'h-20' to lock the height so it doesn't grow too big */
-        <div className='fixed top-0 left-0 z-50 w-full h-30 flex items-center justify-between px-6 md:px-16 1g:px-36 py-5'>
+        <div className='fixed top-0 left-0 z-50 w-full h-20 flex items-center justify-between px-6 md:px-16 1g:px-36 py-5'>
             <Link to='/' className='max-md:flex-1'>
                 {/* Added 'max-h-10' to ensure the logo doesn't stretch the navbar height */}
                 <img src={assets.logo} alt="Logo" className='w-36 max-h-50 h-auto object-contain' />

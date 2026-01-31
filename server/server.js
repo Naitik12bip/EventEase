@@ -21,11 +21,10 @@ const port = process.env.PORT || 3000;
 
 // Connect to Database
 await connectDB();
-
+app.use(clerkMiddleware());
 // --- Middleware Stack ---
 app.use(cors());
 app.use(express.json()); // Body parser must come before routes
-app.use(clerkMiddleware());
 
 // JSON Syntax Error Handler (Fixed: placed specifically after express.json)
 app.use((err, req, res, next) => {
@@ -45,7 +44,7 @@ app.get('/', (req, res) => res.send('Server Is Live!'));
 app.use('/api/user', userRouter);
 
 // 3. Shows Routes (Full path: /api/shows/all)
-app.use('/api/show/all', showRouter);
+app.use('/api/show', showRouter);
 
 // 4. Inngest
 app.use('/api/inngest', serve({ inngestHandler, client: inngest, functions }));

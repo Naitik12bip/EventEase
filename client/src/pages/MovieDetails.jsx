@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { dummyDateTimeData, dummyShowsData } from '../assets/assets.js'
+import toast from 'react-hot-toast'
 import BlurCircle from '../components/BlurCircle.jsx'
 import { Heart, PlayCircleIcon, StarIcon } from 'lucide-react'
 import timeFormat from '../lib/timeFormat.js'
@@ -13,32 +13,33 @@ const MoviesDetails = () => {
   const navigate = useNavigate()
   const { id } = useParams()
   const [show, setShow] = useState(null)
-  const { shows ,axios ,getToken ,user ,fetchFavoriteMovies, favoriteMovies, image_base_url } = useAppContext();
+  const { shows, axios, getToken, user, fetchFavoriteMovies, favoriteMovies, image_base_url } = useAppContext();
 
   const getShow = async () => {
     try {
-      const { data } = await axios.get(`/api/show${id}`);
-      if(data.success){
-        setShow(data)
-      };
+      const { data } = await axios.get(`/show/${id}`);
+      if (data.success) {
+        setShow(data.show);
+      }
     } catch (error) {
       console.log(error)
     }
   }
 
   const handleFavorite = async () => {
-    try{
-      if(!user) return toast.error('Please Login To Proceed');
+    try {
+      if (!user) return toast.error('Please Login To Proceed');
 
-      const { data } = await axios.get('/api/user/update-favorite',{movieId: id},{
+      const { data } = await axios.get('/user/update-favorite', { movieId: id }, {
         headers: {
           Authorization: `Bearer ${await getToken()}`
-        }});
-        if (data.success){
-          await fetchFavoriteMovies();
-          toast.success(data.message)
         }
-    } catch (error){
+      });
+      if (data.success) {
+        await fetchFavoriteMovies();
+        toast.success(data.message)
+      }
+    } catch (error) {
       console.log(error);
     }
   }
@@ -82,7 +83,13 @@ const MoviesDetails = () => {
             </a>
 
             <button onClick={handleFavorite} className='bg-gray-700 p-2.5 rounded-full transition cursor-pointer active:scale-95'>
-              <Heart className={`w-5 h-5 ${favoriteMovies.find(movie => movie._id === id) ? 'fill-primary text-primary': ""}`} />
+              <Heart
+                className={`w-5 h-5 ${favoriteMovies.some(movie => movie._id === id)
+                    ? 'fill-primary text-primary'
+                    : ''
+                  }`}
+              />
+
             </button>
           </div>
 
@@ -97,7 +104,7 @@ const MoviesDetails = () => {
 
         <div className='flex items-center gap-4 w-max px-4'>
 
-          {shows.movie.casts.slice(0, 12).map((cast, index) => (
+          {show.movie.casts.slice(0, 12).map((cast, index) => (
             <div key={index} className='flex flex-col items-center'>
               <img src={image_base_url + cast.profile_path} alt="" className='rounded-full h-20 md:h-20 aspect-square object-cover' />
               <p>
@@ -120,9 +127,10 @@ const MoviesDetails = () => {
       </p>
       <div className='flex flex-wrap max-sm:justify-center gap-8'>
         {/* UPGRADE: Added (movie, index) to fix the ReferenceError */}
-        {show.slice(0, 4).map((movie, index) => (
-          <MovieCard key={index} movie={movie} />
+        {shows.slice(0, 4).map((movie) => (
+          <MovieCard key={movie._id} movie={movie} />
         ))}
+
       </div>
 
       <div className='flex justify-center mt-20'>
@@ -132,7 +140,7 @@ const MoviesDetails = () => {
       </div>
 
     </div>
-  ) : ( 
+  ) : (
     <Loading />
   )
 }

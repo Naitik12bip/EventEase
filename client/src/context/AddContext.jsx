@@ -12,7 +12,7 @@ export const AppContext = createContext();
 export const AppProvider = ({ children }) => {
 
     const [isAdmin, setIsAdmin] = useState(false);
-    const [show, setShow] = useState([]);
+    const [shows, setShows] = useState([]); // ✅ renamed to match usage
     const [favoriteMovies, setFavoriteMovies] = useState([]);
 
     const image_base_url = import.meta.env.VITE_TMDB_IMAGE_BASE_URL;
@@ -25,7 +25,9 @@ export const AppProvider = ({ children }) => {
     const fetchIsAdmin = async () => {
         try {
             const token = await getToken();
-            const { data } = await axios.get("/api/admin/is-admin", {
+            if (!token) return;
+
+            const { data } = await axios.get("/admin/is-admin", {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -42,9 +44,9 @@ export const AppProvider = ({ children }) => {
 
     const fetchShows = async () => {
         try {
-            const { data } = await axios.get("/api/show/all");
+            const { data } = await axios.get("/show/all");
             if (data.success) {
-                setShow(data.shows);
+                setShows(data.shows);
             } else {
                 toast.error(data.message);
             }
@@ -56,7 +58,9 @@ export const AppProvider = ({ children }) => {
     const fetchFavoriteMovies = async () => {
         try {
             const token = await getToken();
-            const { data } = await axios.get("/api/user/favorites", {
+            if (!token) return;
+
+            const { data } = await axios.get("/user/favorites", {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -79,7 +83,7 @@ export const AppProvider = ({ children }) => {
             fetchIsAdmin();
             fetchFavoriteMovies();
         }
-    }, [user]);
+    }, [user, location.pathname]); // ✅ safe dependency
 
     const value = {
         axios,
@@ -88,7 +92,7 @@ export const AppProvider = ({ children }) => {
         getToken,
         navigate,
         isAdmin,
-        show,
+        shows,              // ✅ now matches components
         favoriteMovies,
         fetchFavoriteMovies,
         image_base_url

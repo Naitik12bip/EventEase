@@ -26,14 +26,14 @@ const AdminSidebar = () => {
             </p>
             <div className='w-full'>
                 {adminNavlinks.map((link, index)=>(
-                    <NavLink key={index} to={link.path} end className={({ isActive })=> `relative flex items-center max-md:justify-center gap-2 w-full py-2.5 min-md:pl-10 first:mt-6 text-gray-400 ${isActive && 'bg-primary/15 text-primary group'}`}>
+                    <NavLink key={index} to={link.path} end className={({ isActive })=> `relative flex items-center max-md:justify-center gap-2 w-full py-2.5 md:pl-10 first:mt-6 text-gray-400 ${isActive && 'bg-primary/15 text-primary group'}`}>
                         {({ isActive })=>(
                             <>
                                 <link.icon className='w-5 h-5' />
                                 <p className='max-md:hidden'>
                                     {link.name}
                                 </p>
-                                <span className={`w-1.5 h-10 rounded-1 right-0 absolute ${isActive && 'bg-primary'}`}/>
+                                <span className={`w-1.5 h-10 absolute right-0 rounded ${isActive && 'bg-primary'}`}/>
                             </>
                         )}
                     </NavLink>

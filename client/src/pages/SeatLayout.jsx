@@ -1,6 +1,6 @@
-import React, { use, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { dummyDateTimeData, dummyShowsData, assets } from '../assets/assets'
+import { assets } from '../assets/assets'
 import Loading from '../components/Loading'
 import { ArrowRightIcon, Clock } from 'lucide-react'
 import BlurCircle from '../components/BlurCircle'
@@ -24,7 +24,7 @@ const SeatLayout = () => {
       const { data } = await axios.get(`/api/show/${id}`);
 
       if (data.success) {
-        setShow(data)
+        setShow(data.setShow)
       } else {
         toast.error(data.message);
       }
@@ -53,8 +53,8 @@ const SeatLayout = () => {
         {Array.from({ length: count }, (_, i) => {
           const seatId = `${row}${i + 1}`;
           return (
-            <button key={seatId} onClick={() => handleSeatClick(seatId)} className={`h-8 w-8 rounded border border-primary/60 cursor-pointer 
-            ${selectedSeats.includes(seatId) && "bg-primary text-white"} : ${occupiedSeats.includes(seatId) && "opacity-50"}`}>
+            <button key={seatId} onClick={() => handleSeatClick(seatId)} className={`h-8 w-8 rounded border border-primary/60 cursor-pointer ${selectedSeats.includes(seatId) ? "bg-primary text-white" : ""} ${occupiedSeats.includes(seatId) ? " opacity-50" : ""}`}
+            >
               {seatId}
             </button>
           );
@@ -72,7 +72,7 @@ const SeatLayout = () => {
       } else {
         toast.error(data.message)
       }
-    } catch {
+    } catch (error) {
       console.log(error);
     }
   }

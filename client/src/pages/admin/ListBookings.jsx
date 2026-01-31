@@ -7,14 +7,14 @@ import { useAppContext } from "../../context/AddContext.jsx";
 
 const ListBookings = () => {
 
+    const currency = import.meta.env.VITE_CURRENCY;
     const { axios, getToken, user } = useAppContext();
-
     const [bookings, setBookings] = useState([]);
     const [isLoading, setisLoading] = useState(true);
 
     const getAllBookings = async () => {
         try {
-            const { data } = axios.get("/api/admin/all-bookings", {
+            const { data } = axios.get("/admin/all-bookings", {
                 headers: {Authorization: `Bearer ${await getToken()}`}
             });
             setBookings(data.bookings)
@@ -68,7 +68,7 @@ const ListBookings = () => {
                                     {dateFormat(item.show.showDateTime)}
                                 </td>
                                 <td className="p-2">
-                                    {Object.keys(item.bookedSeats).map(seat => item.bookedSeats[seat]).join(", ")}
+                                    {Object.keys(item.bookedSeats).map(seat => item.bookedSeats).join(", ")}
                                 </td>
                                 <td className="p-2">
                                     {currency} {item.amount}

@@ -31,6 +31,7 @@ const syncUserDeletion = inngest.createFunction(
     }
 );
 
+
 // Sync user update from Clerk
 const syncUserUpdation = inngest.createFunction(
     { id: 'update-user-from-clerk' },
@@ -49,8 +50,9 @@ const syncUserUpdation = inngest.createFunction(
     }
 );
 
+
 export const functions = [
     syncUserCreation,
     syncUserDeletion,
     syncUserUpdation
-]
+];
