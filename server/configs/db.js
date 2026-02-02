@@ -1,15 +1,12 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-const connectDB = async () => {
+const connectDB = async () =>{
     try {
-        mongoose.connection.on('connected', () => console.log('Database Connected to EventEase'));
-        
-        await mongoose.connect(process.env.MONGODB_URI, {
-            dbName: 'eventease'
-        });
+        mongoose.connection.on('connected', ()=> console.log('Database connected'));
+        await mongoose.connect(`${process.env.MONGODB_URI}/quickshow`)
     } catch (error) {
-        console.error("Database connection error:", error.message);
-        process.exit(1);
+        console.log(error.message);
+        
     }
 }
 
