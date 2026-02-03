@@ -16,8 +16,8 @@ const port = 3000;
 
 await connectDB()
 
-// 6. payment api 
-app.use("/api/payment", paymentRouter);
+// Webhook middleware for raw body
+app.use('/api/payment/webhook', express.raw({ type: 'application/json' }));
 
 // Middleware
 app.use(express.json())
@@ -32,6 +32,7 @@ app.use('/api/show', showRouter)
 app.use('/api/booking', bookingRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/user', userRouter)
+app.use('/api/payment', paymentRouter)
 
 
 app.listen(port, ()=> console.log(`Server listening at http://localhost:${port}`));

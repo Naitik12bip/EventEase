@@ -14,13 +14,14 @@
   "dependencies": {
     "@clerk/clerk-sdk-node": "^5.1.6",
     "@clerk/express": "^1.7.63",
-    "axios": "^1.13.2",
+    "axios": "^1.13.4",
     "cloudinary": "^2.9.0",
-    "cors": "^2.8.5",
+    "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "inngest": "^3.49.3",
     "mongoose": "^9.1.5",
+    "nodemailer": "^7.0.13",
     "razorpay": "^2.9.6",
     "stripe": "^20.3.0",
     "svix": "^1.84.1"

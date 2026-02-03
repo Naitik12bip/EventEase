@@ -1,7 +1,12 @@
 import { inngest } from "../inngest/index.js";
 import Booking from "../models/Booking.js";
-import Show from "../models/Show.js"
-import stripe from 'stripe'
+import Show from "../models/Show.js";
+import Razorpay from "razorpay";
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
 
 // Function to check availability of selected seats for a movie
@@ -53,44 +58,25 @@ export const createBooking = async (req, res)=>{
 
         await showData.save();
 
-         // Stripe Gateway Initialize
-         const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY)
+         // Razorpay Order Creation
+         const order = await razorpay.orders.create({
+            amount: booking.amount * 100, // ₹ → paise
+            currency: "INR",
+            receipt: "receipt_" + booking._id,
+         });
 
-         // Creating line items to for Stripe
-         const line_items = [{
-            price_data: {
-                currency: 'usd',
-                product_data:{
-                    name: showData.movie.title
-                },
-                unit_amount: Math.floor(booking.amount) * 100
-            },
-            quantity: 1
-         }]
+         booking.paymentLink = order.id;
+         await booking.save();
 
-         const session = await stripeInstance.checkout.sessions.create({
-            success_url: `${origin}/loading/my-bookings`,
-            cancel_url: `${origin}/my-bookings`,
-            line_items: line_items,
-            mode: 'payment',
-            metadata: {
-                bookingId: booking._id.toString()
-            },
-            expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // Expires in 30 minutes
-         })
-
-         booking.paymentLink = session.url
-         await booking.save()
-
-         // Run Inngest Sheduler Function to check payment status after 10 minutes
+         // Run Inngest Scheduler Function to check payment status after 10 minutes
          await inngest.send({
             name: "app/checkpayment",
             data: {
                 bookingId: booking._id.toString()
             }
-         })
+         });
 
-         res.json({success: true, url: session.url})
+         res.json({success: true, order});
 
     } catch (error) {
         console.log(error.message);

@@ -1,12 +1,10 @@
 import express from "express";
-import { addShow, getNowPlayingMovies, getShow, getShows } from "../controllers/showController.js";
-import { protectAdmin } from "../middleware/auth.js";
+import { getFavorites, getUserBookings, updateFavorite } from "../controllers/userController.js";
 
-const showRouter = express.Router();
+const userRouter = express.Router();
 
-showRouter.get('/now-playing',protectAdmin, getNowPlayingMovies)
-showRouter.post('/add', protectAdmin, addShow)
-showRouter.get("/all", getShows)
-showRouter.get("/:movieId", getShow)
+userRouter.get('/bookings', getUserBookings)
+userRouter.post('/update-favorite', updateFavorite)
+userRouter.get('/favorites', getFavorites)
 
-export default showRouter;
+export default userRouter;

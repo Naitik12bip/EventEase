@@ -8,7 +8,7 @@ const HeroSection = () => {
     const navigate = useNavigate()
 
   return (
-    <div className='flex flex-col items-start justify-center gap-4 px-6 md:px-16 lg:px-36 bg-[url("/backgroundImage.png")] bg-cover bg-center h-screen'>
+    <div className='flex flex-col items-start justify-center gap-4 px-6 md:px-16 lg:px-36 bg-[url("/bgImg.png")] bg-cover bg-center h-screen'>
 
       <img src={assets.marvelLogo} alt="" className="max-h-11 lg:h-11 mt-20"/>
 

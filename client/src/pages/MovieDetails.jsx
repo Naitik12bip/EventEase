@@ -15,7 +15,7 @@ const MovieDetails = () => {
   const {id} = useParams()
   const [show, setShow] = useState(null)
 
-  const {shows, axios, getToken, user, fetchFavoriteMovies, favoriteMovies, image_base_url} = useAppContext()
+  const {shows, axios, getToken, user, fetchFavoriteMovies, favoriteMovies} = useAppContext()
 
   const getShow = async ()=>{
     try {
@@ -51,7 +51,7 @@ const MovieDetails = () => {
     <div className='px-6 md:px-16 lg:px-40 pt-30 md:pt-50'>
       <div className='flex flex-col md:flex-row gap-8 max-w-6xl mx-auto'>
 
-        <img src={image_base_url + show.movie.poster_path} alt="" className='max-md:mx-auto rounded-xl h-104 max-w-70 object-cover'/>
+        <img src={show.movie.poster_path} alt="" className='max-md:mx-auto rounded-xl h-104 max-w-70 object-cover'/>
 
         <div className='relative flex flex-col gap-3'>
           <BlurCircle top="-100px" left="-100px"/>

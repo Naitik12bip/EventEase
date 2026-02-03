@@ -23,7 +23,7 @@ export const AppProvider = ({ children })=>{
 
     const fetchIsAdmin = async ()=>{
         try {
-            const {data} = await axios.get('/api/admin/is-admin', {headers: {Authorization: `Bearer ${await getToken()}`}})
+            const {data} = await axios.get('/admin/is-admin', {headers: {Authorization: `Bearer ${await getToken()}`}})
             setIsAdmin(data.isAdmin)
 
             if(!data.isAdmin && location.pathname.startsWith('/admin')){
@@ -50,7 +50,7 @@ export const AppProvider = ({ children })=>{
 
     const fetchFavoriteMovies = async ()=>{
         try {
-            const { data } = await axios.get('/api/user/favorites', {headers: {Authorization: `Bearer ${await getToken()}`}})
+            const { data } = await axios.get('/user/favorites', {headers: {Authorization: `Bearer ${await getToken()}`}})
 
             if(data.success){
                 setFavoriteMovies(data.movies)
