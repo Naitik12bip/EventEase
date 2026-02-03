@@ -3,7 +3,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import BlurCircle from './BlurCircle'
 import MovieCard from './MovieCard'
-import { useAppContext } from '../context/AppContext'
+import { useAppContext } from '../context/AddContext'
 
 const FeaturedSection = () => {
 
