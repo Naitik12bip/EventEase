@@ -7,6 +7,10 @@ import MovieDetails from './pages/MovieDetails'
 import SeatLayout from './pages/SeatLayout'
 import MyBookings from './pages/MyBookings'
 import Favorite from './pages/Favorite'
+// --- New Imports ---
+import Events from './pages/Events' 
+import Community from './pages/Community'
+// -------------------
 import { Toaster } from 'react-hot-toast'
 import Footer from './components/Footer'
 import Layout from './pages/admin/Layout'
@@ -21,7 +25,6 @@ import Loading from './components/Loading.jsx'
 const App = () => {
 
   const isAdminRoute = useLocation().pathname.startsWith('/admin')
-
   const { user } = useAppContext()
 
   return (
@@ -31,12 +34,18 @@ const App = () => {
       <Routes>
         <Route path='/' element={<Home/>} />
         <Route path='/movies' element={<Movies/>} />
+        
+        {/* Added New Routes */}
+        <Route path='/Events' element={<Events/>} />
+        <Route path='/Community' element={<Community/>} />
+
         <Route path='/movies/:id' element={<MovieDetails/>} />
         <Route path='/movies/:id/:date' element={<SeatLayout/>} />
         <Route path='/my-bookings' element={<MyBookings/>} />
         <Route path='/loading/:nextUrl' element={<Loading/>} />
 
         <Route path='/favorite' element={<Favorite/>} />
+        
         <Route path='/admin/*' element={user ? <Layout/> : (
           <div className='min-h-screen flex justify-center items-center'>
             <SignIn fallbackRedirectUrl={'/admin'} />
@@ -48,7 +57,7 @@ const App = () => {
           <Route path="list-bookings" element={<ListBookings/>}/>
         </Route>
       </Routes>
-       {!isAdminRoute && <Footer />}
+      {!isAdminRoute && <Footer />}
     </>
   )
 }

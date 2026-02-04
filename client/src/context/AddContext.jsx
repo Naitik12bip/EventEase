@@ -63,13 +63,10 @@ export const AppProvider = ({ children })=>{
     }
 
     useEffect(()=>{
-        fetchShows()
-    },[])
-
-    useEffect(()=>{
         if(user){
-            fetchIsAdmin()
-            fetchFavoriteMovies()
+            fetchIsAdmin();
+            fetchShows();
+            fetchFavoriteMovies();
         }
     },[user])
 
