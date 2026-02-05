@@ -7,10 +7,6 @@ import MovieDetails from './pages/MovieDetails'
 import SeatLayout from './pages/SeatLayout'
 import MyBookings from './pages/MyBookings'
 import Favorite from './pages/Favorite'
-// --- New Imports ---
-import Events from './pages/Events' 
-import Community from './pages/Community'
-// -------------------
 import { Toaster } from 'react-hot-toast'
 import Footer from './components/Footer'
 import Layout from './pages/admin/Layout'
@@ -18,13 +14,16 @@ import Dashboard from './pages/admin/Dashboard'
 import AddShows from './pages/admin/AddShows'
 import ListShows from './pages/admin/ListShows'
 import ListBookings from './pages/admin/ListBookings'
-import { useAppContext } from './context/AddContext.jsx'
+import { useAppContext } from './context/AddContext'
 import { SignIn } from '@clerk/clerk-react'
-import Loading from './components/Loading.jsx'
+import Loading from './components/Loading'
+import Events from './pages/Events'
+import Community from './pages/Community'
 
 const App = () => {
 
   const isAdminRoute = useLocation().pathname.startsWith('/admin')
+
   const { user } = useAppContext()
 
   return (
@@ -34,10 +33,8 @@ const App = () => {
       <Routes>
         <Route path='/' element={<Home/>} />
         <Route path='/movies' element={<Movies/>} />
-        
-        {/* Added New Routes */}
-        <Route path='/Events' element={<Events/>} />
-        <Route path='/Community' element={<Community/>} />
+        <Route path='/events' element={<Events/>} />
+        <Route path='/community' element={<Community/>} />
 
         <Route path='/movies/:id' element={<MovieDetails/>} />
         <Route path='/movies/:id/:date' element={<SeatLayout/>} />
@@ -45,19 +42,19 @@ const App = () => {
         <Route path='/loading/:nextUrl' element={<Loading/>} />
 
         <Route path='/favorite' element={<Favorite/>} />
-        
         <Route path='/admin/*' element={user ? <Layout/> : (
           <div className='min-h-screen flex justify-center items-center'>
             <SignIn fallbackRedirectUrl={'/admin'} />
           </div>
         )}>
+          
           <Route index element={<Dashboard/>}/>
           <Route path="add-shows" element={<AddShows/>}/>
           <Route path="list-shows" element={<ListShows/>}/>
           <Route path="list-bookings" element={<ListBookings/>}/>
         </Route>
       </Routes>
-      {!isAdminRoute && <Footer />}
+       {!isAdminRoute && <Footer />}
     </>
   )
 }

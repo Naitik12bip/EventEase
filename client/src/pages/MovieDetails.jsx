@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import BlurCircle from '../components/BlurCircle.jsx'
+import BlurCircle from '../components/BlurCircle'
 import { Heart, PlayCircleIcon, StarIcon } from 'lucide-react'
-import timeFormat from '../lib/timeFormat.js'
-import DateSelect from '../components/DateSelect.jsx'
-import MovieCard from '../components/MovieCard.jsx'
-import Loading from '../components/Loading.jsx'
-import { useAppContext } from '../context/AddContext.jsx'
+import timeFormat from '../lib/timeFormat'
+import DateSelect from '../components/DateSelect'
+import MovieCard from '../components/MovieCard'
+import Loading from '../components/Loading'
+import { useAppContext } from '../context/AddContext'
 import toast from 'react-hot-toast'
 
 const MovieDetails = () => {
@@ -15,7 +15,7 @@ const MovieDetails = () => {
   const {id} = useParams()
   const [show, setShow] = useState(null)
 
-  const {shows, axios, getToken, user, fetchFavoriteMovies, favoriteMovies} = useAppContext()
+  const {shows, axios, getToken, user, fetchFavoriteMovies, favoriteMovies, image_base_url} = useAppContext()
 
   const getShow = async ()=>{
     try {
@@ -51,7 +51,7 @@ const MovieDetails = () => {
     <div className='px-6 md:px-16 lg:px-40 pt-30 md:pt-50'>
       <div className='flex flex-col md:flex-row gap-8 max-w-6xl mx-auto'>
 
-        <img src={show.movie.poster_path} alt="" className='max-md:mx-auto rounded-xl h-104 max-w-70 object-cover'/>
+        <img src={image_base_url + show.movie.poster_path} alt="" className='max-md:mx-auto rounded-xl h-104 max-w-70 object-cover'/>
 
         <div className='relative flex flex-col gap-3'>
           <BlurCircle top="-100px" left="-100px"/>
@@ -110,3 +110,4 @@ const MovieDetails = () => {
 }
 
 export default MovieDetails
+

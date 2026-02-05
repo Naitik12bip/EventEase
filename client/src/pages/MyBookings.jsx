@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import Loading from '../components/Loading.jsx'
-import BlurCircle from '../components/BlurCircle.jsx'
-import timeFormat from '../lib/timeFormat.js'
-import { dateFormat } from '../lib/dateFormat.js'
-import { useAppContext } from '../context/AddContext.jsx'
+import Loading from '../components/Loading'
+import BlurCircle from '../components/BlurCircle'
+import timeFormat from '../lib/timeFormat'
+import { dateFormat } from '../lib/dateFormat'
+import { useAppContext } from '../context/AddContext'
 import { Link } from 'react-router-dom'
 
 const MyBookings = () => {

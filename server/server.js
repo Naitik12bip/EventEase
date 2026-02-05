@@ -21,7 +21,11 @@ app.use('/api/payment/webhook', express.raw({ type: 'application/json' }));
 
 // Middleware
 app.use(express.json())
-app.use(cors())
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://id-preview--95350e67-f0bf-48f0-90d1-522f7504e5de.lovable.app'],
+  credentials: true
+}));
+
 app.use(clerkMiddleware())
 
 
