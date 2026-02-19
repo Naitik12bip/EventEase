@@ -1,10 +1,11 @@
 import express from "express";
-import { getFavorites, getUserBookings, updateFavorite } from "../controllers/userController.js";
+import { getNowPlayingMovies, addShow, getShows, getShow } from "../controllers/showController.js";
 
-const userRouter = express.Router();
+const showRouter = express.Router();
 
-userRouter.get('/bookings', getUserBookings)
-userRouter.post('/update-favorite', updateFavorite)
-userRouter.get('/favorites', getFavorites)
+showRouter.get('/now-playing', getNowPlayingMovies);
+showRouter.post('/add', addShow);
+showRouter.get('/all', getShows);
+showRouter.get('/:movieId', getShow);
 
-export default userRouter;
+export default showRouter;
