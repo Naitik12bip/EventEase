@@ -1,307 +1,434 @@
-import { Inngest } from "inngest";
-import User from "../models/User.js";
-import Booking from "../models/Booking.js";
-import Show from "../models/Show.js";
-import sendEmail from "../configs/nodeMailer.js";
-import { set } from "mongoose";
+/**
+ * User Controller for Supabase
+ * Replaces MongoDB/Mongoose implementation with Supabase PostgreSQL
+ */
 
-// Create a client to send and receive events
-export const inngest = new Inngest({ id: "movie-ticket-booking" });
+import { supabase } from '../configs/db.js';
 
-// Inngest Function to save user data to a database
-const syncUserCreation = inngest.createFunction(
-    {id: 'sync-user-from-clerk'},
-    { event: 'clerk/user.created' },
-    async ({ event })=>{
-        const {id, first_name, last_name, email_addresses, image_url} = event.data
-        const userData = {
-            _id: id,
-            email: email_addresses[0].email_address,
-            name: first_name + ' ' + last_name,
-            image: image_url
+/**
+ * Get User Profile
+ * GET /api/user/:userId
+ */
+export const getUserProfile = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const { data: user, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error || !user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Update User Profile
+ * PUT /api/user/:userId
+ */
+export const updateUserProfile = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { name, phone, image } = req.body;
+
+    const { data: user, error } = await supabase
+      .from('profiles')
+      .update({
+        name: name || undefined,
+        phone: phone || undefined,
+        image: image || undefined,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(200).json({
+      success: true,
+      data: user,
+      message: 'Profile updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Create User Profile
+ * POST /api/user/create
+ * Called during user signup/authentication
+ */
+export const createUserProfile = async (req, res) => {
+  try {
+    const { userId, name, email, phone, image } = req.body;
+
+    // Check if user already exists
+    const { data: existingUser } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .single();
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists'
+      });
+    }
+
+    // Create user profile
+    const { data: user, error } = await supabase
+      .from('profiles')
+      .insert([
+        {
+          id: userId,
+          user_id: userId, // Clerk user_id
+          name: name || 'Anonymous',
+          email,
+          phone: phone || null,
+          image: image || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }
-        await User.create(userData)
-    }
-)
+      ])
+      .select()
+      .single();
 
-// Inngest Function to delete user from database
-const syncUserDeletion = inngest.createFunction(
-    {id: 'delete-user-with-clerk'},
-    { event: 'clerk/user.deleted' },
-    async ({ event })=>{
-        
-       const {id} = event.data
-       await User.findByIdAndDelete(id)
-    }
-)
+    if (error) throw error;
 
-// Inngest Function to update user data in database 
-const syncUserUpdation = inngest.createFunction(
-    {id: 'update-user-from-clerk'},
-    { event: 'clerk/user.updated' },
-    async ({ event })=>{
-        const { id, first_name, last_name, email_addresses, image_url } = event.data
-        const userData = {
-            _id: id,
-            email: email_addresses[0].email_address,
-            name: first_name + ' ' + last_name,
-            image: image_url
+    res.status(201).json({
+      success: true,
+      data: user,
+      message: 'User profile created successfully'
+    });
+  } catch (error) {
+    console.error('Error creating user profile:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Add Movie to Favorites
+ * POST /api/user/:userId/favorites/add
+ */
+export const addToFavorites = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { movieId } = req.body;
+
+    // Check if movie exists
+    const { data: movie } = await supabase
+      .from('movies')
+      .select('id')
+      .eq('id', movieId)
+      .single();
+
+    if (!movie) {
+      return res.status(404).json({
+        success: false,
+        message: 'Movie not found'
+      });
+    }
+
+    // Check if already favorited
+    const { data: existing } = await supabase
+      .from('favorites')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('movie_id', movieId)
+      .single();
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: 'Movie already in favorites'
+      });
+    }
+
+    // Add to favorites
+    const { data: favorite, error } = await supabase
+      .from('favorites')
+      .insert([
+        {
+          user_id: userId,
+          movie_id: movieId
         }
-        await User.findByIdAndUpdate(id, userData)
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json({
+      success: true,
+      data: favorite,
+      message: 'Added to favorites'
+    });
+  } catch (error) {
+    console.error('Error adding to favorites:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Remove Movie from Favorites
+ * DELETE /api/user/:userId/favorites/:movieId
+ */
+export const removeFromFavorites = async (req, res) => {
+  try {
+    const { userId, movieId } = req.params;
+
+    const { error } = await supabase
+      .from('favorites')
+      .delete()
+      .eq('user_id', userId)
+      .eq('movie_id', movieId);
+
+    if (error) throw error;
+
+    res.status(200).json({
+      success: true,
+      message: 'Removed from favorites'
+    });
+  } catch (error) {
+    console.error('Error removing from favorites:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Get User Favorites
+ * GET /api/user/:userId/favorites
+ */
+export const getUserFavorites = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { limit = 20, offset = 0 } = req.query;
+
+    // Get favorite movie IDs
+    const { data: favorites, error: favError } = await supabase
+      .from('favorites')
+      .select('movie_id')
+      .eq('user_id', userId)
+      .range(offset, offset + limit - 1);
+
+    if (favError) throw favError;
+
+    if (!favorites || favorites.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        total: 0
+      });
     }
-)
 
-// Inngest Function to cancel booking and release seats of show after 10 minutes of booking created if payment is not made
-const releaseSeatsAndDeleteBooking = inngest.createFunction(
-    {id: 'release-seats-delete-booking'},
-    {event: "app/checkpayment"},
-    async ({ event, step })=>{
-        const tenMinutesLater = new Date(Date.now() + 10 * 60 * 1000);
-        await step.sleepUntil('wait-for-10-minutes', tenMinutesLater);
+    // Get movie details
+    const movieIds = favorites.map(f => f.movie_id);
+    const { data: movies, error: movieError } = await supabase
+      .from('movies')
+      .select('*')
+      .in('id', movieIds);
 
-        await step.run('check-payment-status', async ()=>{
-            const bookingId = event.data.bookingId;
-            const booking = await Booking.findById(bookingId)
+    if (movieError) throw movieError;
 
-            // If payment is not made, release seats and delete booking
-            if(!booking.isPaid){
-                const show = await Show.findById(booking.show);
-                booking.bookedSeats.forEach((seat)=>{
-                    delete show.occupiedSeats[seat]
-                });
-                show.markModified('occupiedSeats')
-                await show.save()
-                await Booking.findByIdAndDelete(booking._id)
-            }
-        })
+    // Get total count
+    const { count } = await supabase
+      .from('favorites')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    res.status(200).json({
+      success: true,
+      data: movies,
+      total: count || 0
+    });
+  } catch (error) {
+    console.error('Error fetching user favorites:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Check if Movie is Favorited
+ * GET /api/user/:userId/favorites/:movieId/check
+ */
+export const isFavorited = async (req, res) => {
+  try {
+    const { userId, movieId } = req.params;
+
+    const { data: favorite, error } = await supabase
+      .from('favorites')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('movie_id', movieId)
+      .single();
+
+    res.status(200).json({
+      success: true,
+      isFavorited: !!favorite && !error
+    });
+  } catch (error) {
+    // If error is "not found", that's OK - just means not favorited
+    if (error?.code === 'PGRST116') {
+      return res.status(200).json({
+        success: true,
+        isFavorited: false
+      });
     }
-)
 
-// Inngest Function to send email when user books a show
-const sendBookingConfirmationEmail = inngest.createFunction(
-    {id: "send-booking-confirmation-email"},
-    {event: "app/show.booked"},
-    async ({ event, step })=>{
-        const { bookingId } = event.data;
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 
-        const booking = await Booking.findById(bookingId).populate({
-            path: 'show',
-            populate: {path: "movie", model: "Movie"}
-        }).populate('user');
+/**
+ * Get All Users (Admin Only)
+ * GET /api/user/admin/all
+ */
+export const getAllUsers = async (req, res) => {
+  try {
+    const { limit = 50, offset = 0, search } = req.query;
 
-        await sendEmail({
-            to: booking.user.email,
-            subject: `Payment Confirmation: "${booking.show.movie.title}" booked!`,
-            body: ` <div style="font-family: Arial, sans-serif; line-height: 1.5;">
-                        <h2>Hi ${booking.user.name},</h2>
-                        <p>Your booking for <strong style="color: #F84565;">"${booking.show.movie.title}"</strong> is confirmed.</p>
-                        <p>
-                            <strong>Date:</strong> ${new Date(booking.show.showDateTime).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' })}<br/>
-                            <strong>Time:</strong> ${new Date(booking.show.showDateTime).toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata' })}
-                        </p>
-                        <p>Enjoy the show! 🍿</p>
-                        <p>Thanks for booking with us!<br/>— QuickShow Team</p>
-                    </div>`
-        })
+    let query = supabase
+      .from('profiles')
+      .select('id, name, email, phone, image, created_at');
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
     }
-)
 
+    const { data: users, error } = await query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
-// Inngest Function to send reminders
-const sendShowReminders = inngest.createFunction(
-    {id: "send-show-reminders"},
-    { cron: "0 */8 * * *" }, // Every 8 hours
-    async ({ step })=>{
-        const now = new Date();
-        const in8Hours = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-        const windowStart = new Date(in8Hours.getTime() - 10 * 60 * 1000);
+    if (error) throw error;
 
-        // Prepare reminder tasks
-        const reminderTasks =  await step.run("prepare-reminder-tasks", async ()=>{
-            const shows = await Show.find({
-                showTime: { $gte: windowStart, $lte: in8Hours },
-            }).populate('movie');
+    // Get total count
+    const { count } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true });
 
-            const tasks = [];
+    res.status(200).json({
+      success: true,
+      data: users,
+      total: count || 0
+    });
+  } catch (error) {
+    console.error('Error fetching all users:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 
-            for(const show of shows){
-                if(!show.movie || !show.occupiedSeats) continue;
+/**
+ * Get User Statistics (Admin)
+ * GET /api/user/admin/stats/:userId
+ */
+export const getUserStats = async (req, res) => {
+  try {
+    const { userId } = req.params;
 
-                const userIds = [...new Set(Object.values(show.occupiedSeats))];
-                if(userIds.length === 0) continue;
+    // Total bookings
+    const { count: totalBookings } = await supabase
+      .from('bookings')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
 
-                const users = await User.find({_id: {$in: userIds}}).select("name email");
+    // Confirmed bookings
+    const { count: confirmedBookings } = await supabase
+      .from('bookings')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'confirmed');
 
-                for(const user of users){
-                    tasks.push({
-                        userEmail: user.email,
-                        userName: user.name,
-                        movieTitle: show.movie.title,
-                        showTime: show.showTime,
-                    })
-                }
-            }
-            return tasks;
-        })
+    // Cancelled bookings
+    const { count: cancelledBookings } = await supabase
+      .from('bookings')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'cancelled');
 
-        if(reminderTasks.length === 0){
-            return {sent: 0, message: "No reminders to send."}
-        }
+    // Total spent
+    const { data: payments, error: paymentError } = await supabase
+      .from('payments')
+      .select('amount')
+      .eq('user_id', userId)
+      .eq('status', 'completed');
 
-         // Send reminder emails
-         const results = await step.run('send-all-reminders', async ()=>{
-            return await Promise.allSettled(
-                reminderTasks.map(task => sendEmail({
-                    to: task.userEmail,
-                    subject: `Reminder: Your movie "${task.movieTitle}" starts soon!`,
-                     body: `<div style="font-family: Arial, sans-serif; padding: 20px;">
-                            <h2>Hello ${task.userName},</h2>
-                            <p>This is a quick reminder that your movie:</p>
-                            <h3 style="color: #F84565;">"${task.movieTitle}"</h3>
-                            <p>
-                                is scheduled for <strong>${new Date(task.showTime).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' })}</strong> at 
-                                <strong>${new Date(task.showTime).toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata' })}</strong>.
-                            </p>
-                            <p>It starts in approximately <strong>8 hours</strong> - make sure you're ready!</p>
-                            <br/>
-                            <p>Enjoy the show!<br/>QuickShow Team</p>
-                        </div>`
-                }))
-            )
-         })
+    const totalSpent = payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
 
-         const sent = results.filter(r => r.status === "fulfilled").length;
-         const failed = results.length - sent;
+    // Favorites count
+    const { count: favoriteCount } = await supabase
+      .from('favorites')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
 
-         return {
-            sent,
-            failed,
-            message: `Sent ${sent} reminder(s), ${failed} failed.`
-         }
-    }
-)
+    res.status(200).json({
+      success: true,
+      data: {
+        totalBookings: totalBookings || 0,
+        confirmedBookings: confirmedBookings || 0,
+        cancelledBookings: cancelledBookings || 0,
+        totalSpent,
+        favoriteCount: favoriteCount || 0
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 
-// Inngest Function to send notifications when a new show is added
-const sendNewShowNotifications = inngest.createFunction(
-    {id: "send-new-show-notifications"},
-    { event: "app/show.added" },
-    async ({ event })=>{
-        const { movieTitle } = event.data;
-
-        const users =  await User.find({})
-
-        for(const user of users){
-            const userEmail = user.email;
-            const userName = user.name;
-
-            const subject = `🎬 New Show Added: ${movieTitle}`;
-            const body = `<div style="font-family: Arial, sans-serif; padding: 20px;">
-                    <h2>Hi ${userName},</h2>
-                    <p>We've just added a new show to our library:</p>
-                    <h3 style="color: #F84565;">"${movieTitle}"</h3>
-                    <p>Visit our website</p>
-                    <br/>
-                    <p>Thanks,<br/>QuickShow Team</p>
-                </div>`;
-
-                await sendEmail({
-                    to: userEmail,
-                    subject,
-                    body,
-                })
-        }
-
-        return {message: "Notifications sent." }
-        
-    }
-)
-
-// API handler functions
-export const getUserBookings = async (req, res) => {
-    try {
-        const userId = req.auth().userId;
-        const bookings = await Booking.find({ user: userId }).populate({
-            path: 'show',
-            populate: { path: 'movie', model: 'Movie' }
-        }).sort({ createdAt: -1 });
-        res.json({ success: true, bookings });
-    } catch (error) {
-        res.json({ success: false, message: error.message });
-    }
-}
-
-export const getUserBookingsFunction = async (req, res) => {
-    try {
-        const userId = req.auth().userId;
-        const bookings = await Booking.find({ user: userId }).populate({
-            path: 'show',
-            populate: { path: 'movie', model: 'Movie' }
-        }).sort({ createdAt: -1 });
-
-        // Format bookings to match frontend expectations
-        const formattedBookings = bookings.map(booking => ({
-            id: booking._id.toString(),
-            userId: booking.user.toString(),
-            showId: booking.show._id.toString(),
-            seatIds: booking.bookedSeats,
-            amount: booking.amount,
-            isPaid: booking.isPaid,
-            createdAt: booking.createdAt,
-            show: {
-                _id: booking.show._id.toString(),
-                movie: {
-                    _id: booking.show.movie._id.toString(),
-                    title: booking.show.movie.title,
-                    poster_path: booking.show.movie.poster_path,
-                },
-                showDateTime: booking.show.showDateTime,
-                showPrice: booking.show.showPrice,
-            }
-        }));
-
-        res.json({ success: true, bookings: formattedBookings });
-    } catch (error) {
-        console.error("Get user bookings error:", error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-}
-
-export const updateFavorite = async (req, res) => {
-    try {
-        const userId = req.body.userId;
-        const movieId = req.body.movieId;
-        const user = await User.findById(userId);
-        if (!user.favorites) user.favorites = [];
-        if (user.favorites.includes(movieId)) {
-            user.favorites = user.favorites.filter(id => id !== movieId);
-        } else {
-            user.favorites.push(movieId);
-        }
-        await user.save();
-        res.json({ success: true, favorites: user.favorites });
-    } catch (error) {
-        res.json({ success: false, message: error.message });
-    }
-}
-
-export const getFavorites = async (req, res) => {
-    try {
-        const userId = req.body.userId;
-        const user = await User.findById(userId);
-        const favorites = user.favorites || [];
-        res.json({ success: true, favorites });
-    } catch (error) {
-        res.json({ success: false, message: error.message });
-    }
-}
-
-
-export const functions = [
-    syncUserCreation,
-    syncUserDeletion,
-    syncUserUpdation,
-    releaseSeatsAndDeleteBooking,
-    sendBookingConfirmationEmail,
-    sendShowReminders,
-    sendNewShowNotifications
-];
+export default {
+  getUserProfile,
+  updateUserProfile,
+  createUserProfile,
+  addToFavorites,
+  removeFromFavorites,
+  getUserFavorites,
+  isFavorited,
+  getAllUsers,
+  getUserStats
+};

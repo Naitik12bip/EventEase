@@ -1,180 +1,381 @@
-import axios from "axios";
-import Movie from "../models/Movie.js";
-import Show from "../models/Show.js";
+/**
+ * Show Controller for Supabase
+ * Replaces MongoDB/Mongoose implementation with Supabase PostgreSQL
+ */
 
-// --- DUMMY DATA ---
-const dummyShows = [
-  {
-    _id: "dummy1",
-    movieId: "dummy1",
-    showDateTime: new Date().toISOString(),
-    showPrice: 250,
-    occupiedSeats: [],
-    movie: {
-      _id: "dummy1", // Yeh field add karna zaroori hai
-      title: "Test Movie (Database Khali Hai)",
-      overview: "Admin panel se movie add karein.",
-      poster_path: "https://via.placeholder.com/500x750?text=No+Poster",
-      vote_average: 7,
-      genres: [{ name: "Test" }],
-      runtime: 120
-    }
-  }
-];
-// 1. GET ALL SHOWS (Database + Ticketmaster)
-export const getShows = async (req, res) => {
+import { supabase } from '../configs/db.js';
+import axios from 'axios';
+
+const TMDB_API_KEY = process.env.TMDB_API_KEY;
+const BASE_URL = 'https://api.themoviedb.org/3';
+
+/**
+ * Get Now Playing Movies with Shows
+ * GET /api/show/now-playing
+ */
+export const getNowPlayingShows = async (req, res) => {
   try {
-    const TM_API_KEY = 'hOkJkATAyKr0GOmOrrAF0CkhilLZvcvw';
-    const CITY = 'New York';
+    const { page = 1, limit = 20 } = req.query;
 
-    const [dbShowsResult, tmResponseResult] = await Promise.allSettled([
-      Show.find({}).populate('movie').sort({ showDateTime: 1 }),
-      axios.get(`https://app.ticketmaster.com/discovery/v2/events.json?apikey=${TM_API_KEY}&city=${CITY}&size=15`)
-    ]);
+    // Get movies from Supabase
+    const { data: movies, error } = await supabase
+      .from('movies')
+      .select('*')
+      .order('vote_average', { ascending: false })
+      .range((page - 1) * limit, page * limit - 1);
 
-    const movieShowsMap = new Map();
+    if (error) throw error;
 
-    // A. Database Data (Admin Panel se add ki hui movies)
-    if (dbShowsResult.status === 'fulfilled' && dbShowsResult.value.length > 0) {
-      dbShowsResult.value.forEach(show => {
-        if (show.movie) {
-          movieShowsMap.set(show.movie._id.toString(), {
-            _id: show.movie._id.toString(),
-            movieId: show.movie._id,
-            showDateTime: show.showDateTime,
-            showPrice: show.showPrice,
-            occupiedSeats: show.occupiedSeats || [],
-            movie: show.movie
-          });
-        }
-      });
-    }
+    // Get shows for each movie
+    const showsData = await Promise.all(
+      movies.map(async (movie) => {
+        const { data: shows } = await supabase
+          .from('shows')
+          .select('*')
+          .eq('movie_id', movie.id)
+          .order('show_date_time', { ascending: true });
 
-    // B. Ticketmaster Data (Live Events)
-    if (tmResponseResult.status === 'fulfilled' && tmResponseResult.value.data?._embedded) {
-      tmResponseResult.value.data._embedded.events.forEach(event => {
-        if (!movieShowsMap.has(event.id)) {
-          const poster = event.images?.find(img => img.ratio === "2_3")?.url || event.images?.[0]?.url;
-          movieShowsMap.set(event.id, {
-            _id: event.id,
-            movieId: event.id,
-            showDateTime: event.dates?.start?.dateTime || new Date().toISOString(),
-            showPrice: 200,
-            occupiedSeats: [],
-            movie: {
-              id: event.id,
-              title: event.name,
-              overview: event.info || "Live Event",
-              poster_path: poster,
-              vote_average: 7,
-              genres: [{ name: "Live Event" }]
-            }
-          });
-        }
-      });
-    }
-
-    let finalShows = Array.from(movieShowsMap.values());
-
-    // C. Fallback: Agar dono jagah data nahi hai
-    if (finalShows.length === 0) {
-      finalShows = dummyShows;
-    }
-
-    res.json({ success: true, shows: finalShows });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// 2. ADD SHOW (Admin Logic)
-export const addShow = async (req, res) => {
-  try {
-    const { movieId, showsInput, showPrice } = req.body;
-    let movie = await Movie.findById(movieId);
-
-    if (!movie) {
-      // TMDB API use karni hai yahan, Ticketmaster ki nahi
-      const TMDB_KEY = process.env.TMDB_API_KEY;
-      const response = await axios.get(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${TMDB_KEY}&append_to_response=credits`);
-
-      const data = response.data;
-      movie = await Movie.create({
-        _id: movieId,
-        title: data.title,
-        overview: data.overview,
-        poster_path: data.poster_path,
-        backdrop_path: data.backdrop_path,
-        genres: data.genres,
-        casts: data.credits?.cast || [],
-        release_date: data.release_date,
-        vote_average: data.vote_average,
-        runtime: data.runtime,
-      });
-    }
-
-    const showsToCreate = showsInput.flatMap(s =>
-      s.time.map(t => ({
-        movie: movieId,
-        showDateTime: new Date(`${s.date}T${t}`),
-        showPrice,
-        occupiedSeats: {}
-      }))
+        return {
+          ...movie,
+          shows: shows || []
+        };
+      })
     );
 
-    if (showsToCreate.length > 0) await Show.insertMany(showsToCreate);
-
-    res.json({ success: true, message: 'Show and Movie added successfully.' });
+    res.status(200).json({
+      success: true,
+      data: showsData,
+      total: movies.length
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error fetching now playing shows:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
-// 3. GET SINGLE SHOW
-export const getShow = async (req, res) => {
+/**
+ * Get Movie Details by ID with Shows
+ * GET /api/show/:movieId
+ */
+export const getMovieDetails = async (req, res) => {
   try {
     const { movieId } = req.params;
-    console.log("Fetching details for ID:", movieId);
 
-    // 1. Handle Dummy Data
-    if (movieId === "dummy1") {
-      return res.json({ 
-        success: true, 
-        movie: dummyShows[0].movie, 
-        shows: dummyShows 
+    // Get movie from Supabase
+    const { data: movie, error: movieError } = await supabase
+      .from('movies')
+      .select('*')
+      .eq('id', movieId)
+      .single();
+
+    if (movieError || !movie) {
+      return res.status(404).json({
+        success: false,
+        message: 'Movie not found'
       });
     }
 
-    // 2. Handle Real DB Data
-    const movie = await Movie.findById(movieId);
+    // Get shows for this movie
+    const { data: shows, error: showsError } = await supabase
+      .from('shows')
+      .select('*')
+      .eq('movie_id', movieId)
+      .order('show_date_time', { ascending: true });
+
+    if (showsError) throw showsError;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        ...movie,
+        shows: shows || []
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching movie details:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Create Show
+ * POST /api/show/create
+ * Admin only
+ */
+export const createShow = async (req, res) => {
+  try {
+    const { movieId, showDateTime, price, occupiedSeats } = req.body;
+
+    // Validate movie exists
+    const { data: movie } = await supabase
+      .from('movies')
+      .select('id')
+      .eq('id', movieId)
+      .single();
+
     if (!movie) {
-        // Agar DB mein nahi mili, toh ho sakta hai Ticketmaster ID ho
-        // Yahan aap Ticketmaster fallback logic bhi daal sakte hain
-        return res.status(404).json({ success: false, message: 'Movie details not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'Movie not found'
+      });
     }
 
-    const shows = await Show.find({ movie: movieId });
+    // Create show
+    const { data: show, error } = await supabase
+      .from('shows')
+      .insert([
+        {
+          movie_id: movieId,
+          show_date_time: showDateTime,
+          show_price: price,
+          occupied_seats: occupiedSeats || {}
+        }
+      ])
+      .select()
+      .single();
 
-    res.json({ 
-      success: true, 
-      movie, 
-      shows: shows || [] 
+    if (error) throw error;
+
+    res.status(201).json({
+      success: true,
+      data: show,
+      message: 'Show created successfully'
     });
-
   } catch (error) {
-    console.error("Detail Fetch Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error creating show:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
-// 4. GET NOW PLAYING (Search)
-export const getNowPlayingMovies = async (req, res) => {
+/**
+ * Update Show Occupied Seats
+ * POST /api/show/:showId/occupy-seats
+ */
+export const occupySeats = async (req, res) => {
   try {
-    const TMDB_KEY = process.env.TMDB_API_KEY;
-    const { data } = await axios.get(`https://api.themoviedb.org/3/movie/now_playing?api_key=${TMDB_KEY}`);
-    res.json({ success: true, movies: data.results });
+    const { showId } = req.params;
+    const { seatIds } = req.body;
+
+    // Get current occupied seats
+    const { data: show, error: getError } = await supabase
+      .from('shows')
+      .select('occupied_seats')
+      .eq('id', showId)
+      .single();
+
+    if (getError) throw getError;
+
+    // Add new occupied seats
+    const currentOccupied = show.occupied_seats || {};
+    const updatedOccupied = {
+      ...currentOccupied,
+      ...Object.fromEntries(seatIds.map(id => [id, true]))
+    };
+
+    // Update show
+    const { data: updatedShow, error: updateError } = await supabase
+      .from('shows')
+      .update({ occupied_seats: updatedOccupied })
+      .eq('id', showId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    res.status(200).json({
+      success: true,
+      data: updatedShow,
+      message: 'Seats occupied successfully'
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error occupying seats:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
+/**
+ * Get Occupied Seats for a Show
+ * GET /api/show/:showId/occupied-seats
+ */
+export const getOccupiedSeats = async (req, res) => {
+  try {
+    const { showId } = req.params;
+
+    const { data: show, error } = await supabase
+      .from('shows')
+      .select('occupied_seats')
+      .eq('id', showId)
+      .single();
+
+    if (error) throw error;
+
+    res.status(200).json({
+      success: true,
+      data: show.occupied_seats || {}
+    });
+  } catch (error) {
+    console.error('Error fetching occupied seats:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Search Shows by Filters
+ * GET /api/show/search?city=&date=&genre=
+ */
+export const searchShows = async (req, res) => {
+  try {
+    const { city, date, genre, minPrice, maxPrice } = req.query;
+
+    let query = supabase
+      .from('shows')
+      .select(`
+        *,
+        movies (
+          id, title, poster_path, genres
+        )
+      `);
+
+    // Add filters
+    if (date) {
+      const startDate = new Date(date).toISOString();
+      const endDate = new Date(new Date(date).getTime() + 86400000).toISOString();
+      query = query.gte('show_date_time', startDate).lt('show_date_time', endDate);
+    }
+
+    if (minPrice) query = query.gte('show_price', parseFloat(minPrice));
+    if (maxPrice) query = query.lte('show_price', parseFloat(maxPrice));
+
+    const { data: shows, error } = await query.order('show_date_time', { ascending: true });
+
+    if (error) throw error;
+
+    // Client-side filtering for complex queries
+    let results = shows;
+    if (genre) {
+      results = results.filter(show =>
+        show.movies?.genres?.some(g => g.name.toLowerCase().includes(genre.toLowerCase()))
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      data: results,
+      total: results.length
+    });
+  } catch (error) {
+    console.error('Error searching shows:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Sync Movies from TMDB
+ * POST /api/show/sync-tmdb
+ * Admin only
+ */
+export const syncMoviesFromTMDB = async (req, res) => {
+  try {
+    const { page = 1 } = req.body;
+
+    // Fetch from TMDB
+    const response = await axios.get(
+      `${BASE_URL}/movie/now_playing?api_key=${TMDB_API_KEY}&region=IN&page=${page}`
+    );
+
+    const tmdbMovies = response.data.results.map(movie => ({
+      id: movie.id.toString(),
+      title: movie.title,
+      overview: movie.overview,
+      poster_path: movie.poster_path
+        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+        : null,
+      backdrop_path: movie.backdrop_path
+        ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}`
+        : null,
+      release_date: movie.release_date,
+      original_language: movie.original_language,
+      vote_average: movie.vote_average,
+      popularity: movie.popularity
+    }));
+
+    // Upsert into Supabase
+    const { data: movies, error } = await supabase
+      .from('movies')
+      .upsert(tmdbMovies, { onConflict: 'id' })
+      .select();
+
+    if (error) throw error;
+
+    res.status(200).json({
+      success: true,
+      data: movies,
+      message: `Synced ${movies.length} movies from TMDB`,
+      totalPages: response.data.total_pages
+    });
+  } catch (error) {
+    console.error('Error syncing TMDB movies:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Delete Show
+ * DELETE /api/show/:showId
+ * Admin only
+ */
+export const deleteShow = async (req, res) => {
+  try {
+    const { showId } = req.params;
+
+    const { error } = await supabase
+      .from('shows')
+      .delete()
+      .eq('id', showId);
+
+    if (error) throw error;
+
+    res.status(200).json({
+      success: true,
+      message: 'Show deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting show:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+export default {
+  getNowPlayingShows,
+  getMovieDetails,
+  createShow,
+  occupySeats,
+  getOccupiedSeats,
+  searchShows,
+  syncMoviesFromTMDB,
+  deleteShow
+};
