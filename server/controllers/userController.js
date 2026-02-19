@@ -219,11 +219,50 @@ const sendNewShowNotifications = inngest.createFunction(
 // API handler functions
 export const getUserBookings = async (req, res) => {
     try {
-        const userId = req.body.userId;
-        const bookings = await Booking.find({ userId }).populate('showId');
+        const userId = req.auth().userId;
+        const bookings = await Booking.find({ user: userId }).populate({
+            path: 'show',
+            populate: { path: 'movie', model: 'Movie' }
+        }).sort({ createdAt: -1 });
         res.json({ success: true, bookings });
     } catch (error) {
         res.json({ success: false, message: error.message });
+    }
+}
+
+export const getUserBookingsFunction = async (req, res) => {
+    try {
+        const userId = req.auth().userId;
+        const bookings = await Booking.find({ user: userId }).populate({
+            path: 'show',
+            populate: { path: 'movie', model: 'Movie' }
+        }).sort({ createdAt: -1 });
+
+        // Format bookings to match frontend expectations
+        const formattedBookings = bookings.map(booking => ({
+            id: booking._id.toString(),
+            userId: booking.user.toString(),
+            showId: booking.show._id.toString(),
+            seatIds: booking.bookedSeats,
+            amount: booking.amount,
+            isPaid: booking.isPaid,
+            createdAt: booking.createdAt,
+            show: {
+                _id: booking.show._id.toString(),
+                movie: {
+                    _id: booking.show.movie._id.toString(),
+                    title: booking.show.movie.title,
+                    poster_path: booking.show.movie.poster_path,
+                },
+                showDateTime: booking.show.showDateTime,
+                showPrice: booking.show.showPrice,
+            }
+        }));
+
+        res.json({ success: true, bookings: formattedBookings });
+    } catch (error) {
+        console.error("Get user bookings error:", error);
+        res.status(500).json({ success: false, error: error.message });
     }
 }
 

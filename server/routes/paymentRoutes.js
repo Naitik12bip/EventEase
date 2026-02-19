@@ -1,12 +1,12 @@
 import express from "express";
-import { createOrder, verifyPayment } from "../controllers/paymentController.js";
+import { createRazorpayOrder, verifyRazorpayPayment } from "../controllers/paymentController.js";
 import crypto from "crypto";
 import Booking from "../models/Booking.js";
 
 const paymentRouter = express.Router();
 
-paymentRouter.post("/create-order", createOrder);
-paymentRouter.post("/verify-payment", verifyPayment);
+paymentRouter.post("/create-razorpay-order", createRazorpayOrder);
+paymentRouter.post("/verify-razorpay-payment", verifyRazorpayPayment);
 paymentRouter.post("/webhook", async (req, res) => {
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
   const signature = req.headers["x-razorpay-signature"];
