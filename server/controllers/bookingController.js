@@ -67,6 +67,7 @@ export const createRazorpayOrder = async (req, res) => {
         {
           user_id: userId,
           show_id: showId,
+          selected_seats: selectedSeats,
           total_amount: totalAmount,
           convenience_fee: convenienceFee,
           status: 'pending'
@@ -91,6 +92,21 @@ export const createRazorpayOrder = async (req, res) => {
       ]);
 
     if (paymentError) throw paymentError;
+
+    // Update occupied seats in the show
+    const currentOccupiedSeats = show.occupied_seats || {};
+    const updatedOccupiedSeats = { ...currentOccupiedSeats };
+
+    selectedSeats.forEach(seat => {
+      updatedOccupiedSeats[seat.id] = true;
+    });
+
+    const { error: updateShowError } = await supabase
+      .from('shows')
+      .update({ occupied_seats: updatedOccupiedSeats })
+      .eq('id', showId);
+
+    if (updateShowError) throw updateShowError;
 
     res.status(200).json({
       success: true,
