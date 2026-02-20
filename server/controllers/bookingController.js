@@ -436,7 +436,37 @@ export const getAllBookings = async (req, res) => {
   }
 };
 
+// Backward-compatible handlers used by existing route files
+export const createBooking = createRazorpayOrder;
+
+export const getOccupiedSeats = async (req, res) => {
+  try {
+    const { showId } = req.params;
+
+    const { data: show, error } = await supabase
+      .from('shows')
+      .select('occupied_seats')
+      .eq('id', showId)
+      .single();
+
+    if (error) throw error;
+
+    res.status(200).json({
+      success: true,
+      occupiedSeats: show?.occupied_seats || {}
+    });
+  } catch (error) {
+    console.error('Error fetching occupied seats:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 export default {
+  createBooking,
+  getOccupiedSeats,
   createRazorpayOrder,
   verifyPayment,
   getUserBookings,

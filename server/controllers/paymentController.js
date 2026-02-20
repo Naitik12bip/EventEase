@@ -1,7 +1,8 @@
 import Razorpay from "razorpay";
 import crypto from "crypto";
-import Booking from "../models/Booking.js";
-import Show from "../models/Show.js";
+//import Booking from "../models/Booking.js";
+//import Show from "../models/Show.js";
+import { supabase } from "../configs/db.js";
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -16,14 +17,18 @@ export const createRazorpayOrder = async (req, res) => {
     // Calculate total amount
     const amount = ticketPrice * seatIds.length;
 
-    // Check seat availability
-    const show = await Show.findById(showId);
+     const { data: show } = await supabase
+      .from('shows')
+      .select('occupied_seats')
+      .eq('id', showId)
+      .single();
+
     if (!show) {
       return res.status(404).json({ success: false, error: "Show not found" });
     }
 
-    const occupiedSeats = show.occupiedSeats || [];
-    const isAnySeatTaken = seatIds.some(seat => occupiedSeats.includes(seat));
+    const occupiedSeats = show.occupied_seats || {};
+    const isAnySeatTaken = seatIds.some((seat) => occupiedSeats[seat]);
 
     if (isAnySeatTaken) {
       return res.status(400).json({ success: false, error: "Some seats are already occupied" });
@@ -31,7 +36,7 @@ export const createRazorpayOrder = async (req, res) => {
 
     // Create Razorpay order
     const order = await razorpay.orders.create({
-      amount: amount * 100, // Convert to paise
+      amount: amount * 100,
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
       notes: {
@@ -42,16 +47,14 @@ export const createRazorpayOrder = async (req, res) => {
       },
     });
 
-    // Create pending booking
-    const booking = new Booking({
-      user: userId,
-      show: showId,
-      amount: amount,
-      bookedSeats: seatIds,
-      isPaid: false,
-      paymentLink: order.id,
+    await supabase.from('bookings').insert({
+      user_id: userId,
+      show_id: showId,
+      total_amount: amount,
+      booked_seats: seatIds,
+      status: 'pending',
+      payment_link: order.id,
     });
-    await booking.save();
 
     res.json({
       success: true,
@@ -67,7 +70,7 @@ export const createRazorpayOrder = async (req, res) => {
 
 export const verifyRazorpayPayment = async (req, res) => {
   try {
-    const { orderId, paymentId, signature, userId, showId, seatIds } = req.body;
+    const { orderId, paymentId, signature, showId, seatIds } = req.body;
 
     // Verify payment signature
     const sign = orderId + "|" + paymentId;
@@ -81,20 +84,34 @@ export const verifyRazorpayPayment = async (req, res) => {
     }
 
     // Update booking as paid
-    const booking = await Booking.findOneAndUpdate(
-      { paymentLink: orderId, user: userId },
-      { isPaid: true },
-      { new: true }
-    );
+    const { data: booking } = await supabase
+      .from('bookings')
+      .update({ status: 'confirmed', razorpay_payment_id: paymentId })
+      .eq('payment_link', orderId)
+      .select('*')
+      .single();
 
     if (!booking) {
       return res.status(404).json({ success: false, error: "Booking not found" });
     }
 
     // Update occupied seats in show
-    await Show.findByIdAndUpdate(showId, {
-      $push: { occupiedSeats: { $each: seatIds } }
+    const { data: show } = await supabase
+      .from('shows')
+      .select('occupied_seats')
+      .eq('id', showId)
+      .single();
+
+    const occupiedSeats = show?.occupied_seats || {};
+    seatIds.forEach((seat) => {
+      occupiedSeats[seat] = true;
     });
+
+    await supabase
+      .from('shows')
+      .update({ occupied_seats: occupiedSeats })
+      .eq('id', showId);
+
 
     res.json({ success: true, message: "Payment verified and booking confirmed" });
   } catch (error) {

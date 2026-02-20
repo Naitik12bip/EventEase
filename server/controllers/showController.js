@@ -369,7 +369,17 @@ export const deleteShow = async (req, res) => {
   }
 };
 
+// Backward-compatible handlers used by existing route files
+export const getNowPlayingMovies = getNowPlayingShows;
+export const addShow = createShow;
+export const getShows = searchShows;
+export const getShow = getMovieDetails;
+
 export default {
+  getNowPlayingMovies,
+  addShow,
+  getShows,
+  getShow,
   getNowPlayingShows,
   getMovieDetails,
   createShow,

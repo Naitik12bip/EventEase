@@ -1,7 +1,7 @@
 import express from "express";
 import { createRazorpayOrder, verifyRazorpayPayment } from "../controllers/paymentController.js";
 import crypto from "crypto";
-import Booking from "../models/Booking.js";
+import { supabase } from "../configs/db.js";
 
 const paymentRouter = express.Router();
 
@@ -26,10 +26,10 @@ paymentRouter.post("/webhook", async (req, res) => {
     const paymentEntity = event.payload.payment.entity;
     const orderId = paymentEntity.order_id;
     // Update booking
-    await Booking.findOneAndUpdate(
-      { paymentLink: orderId },
-      { isPaid: true }
-    );
+    await supabase
+      .from('bookings')
+      .update({ status: 'confirmed' })
+      .eq('payment_link', orderId);
   }
 
   res.json({ status: "ok" });
